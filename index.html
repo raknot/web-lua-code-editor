@@ -530,6 +530,7 @@
                 <div class="actions">
                     <button class="action-btn" id="formatBtn">Format</button>
                     <button class="action-btn" id="checkSyntaxBtn">Check Syntax</button>
+                    <button class="action-btn" id="copyBtn">Copy Code</button>
                     <button class="action-btn" id="exportBtn">Export</button>
                     <button class="action-btn" id="settingsBtn">Settings</button>
                 </div>
@@ -599,7 +600,7 @@
         let files = [{
             name: 'welcome.lua',
             content: `-- Welcome to Raknot Lua Editor
--- This is just an example please host it yourself as nothing will save
+-- A lightweight browser-based Lua IDE
 
 print("Hello, World!")
 
@@ -691,6 +692,7 @@ print("Hello, World!")
 
         document.getElementById('formatBtn').addEventListener('click', formatCode);
         document.getElementById('checkSyntaxBtn').addEventListener('click', () => checkSyntax(false));
+        document.getElementById('copyBtn').addEventListener('click', copyCode);
         document.getElementById('exportBtn').addEventListener('click', exportCurrentFile);
         document.getElementById('settingsBtn').addEventListener('click', () => {
             document.getElementById('settingsModal').classList.add('active');
@@ -856,6 +858,17 @@ print("Hello, World!")
             a.click();
             URL.revokeObjectURL(url);
             addLog('console', `Exported: ${file.name}`, 'success');
+        }
+
+        function copyCode() {
+            const code = editor.getValue();
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('Code copied to clipboard', 'success');
+                addLog('console', 'Code copied to clipboard', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy code', 'error');
+                addLog('console', 'Failed to copy code', 'error');
+            });
         }
 
         function addLog(type, message, level = 'info') {
