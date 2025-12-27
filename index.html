@@ -1,1 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raknot Lua Editor</title>
+    <link rel="icon" type="image/webp" href="https://raknot.dev/dashboard/images/logo.webp">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs-bar {
+            height: 50px;
+            background: #151515;
+            border-bottom: 1px solid #252525;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-right: 16px;
+            border-right: 1px solid #252525;
+        }
+
+        .logo-section img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+
+        .logo-section span {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .add-file-dropdown {
+            position: relative;
+        }
+
+        .add-file-btn {
+            padding: 6px 14px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-file-btn:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 4px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            min-width: 160px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 100;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #252525;
+        }
+
+        .dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            color: #888;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .tab:hover {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        .tab.active {
+            background: #0a0a0a;
+            color: #fff;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-close {
+            margin-left: 8px;
+            opacity: 0.6;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .tab-close:hover {
+            opacity: 1;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            background: #0a0a0a;
+            position: relative;
+        }
+
+        #editor {
+            width: 100%;
+            height: 100%;
+        }
+
+        .bottom-panel {
+            height: 200px;
+            background: #111111;
+            border-top: 1px solid #252525;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-tabs {
+            height: 35px;
+            background: #151515;
+            border-bottom: 1px solid #252525;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+        }
+
+        .panel-tab {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        .panel-tab:hover {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        .panel-tab.active {
+            background: #252525;
+            color: #fff;
+        }
+
+        .clear-btn {
+            margin-left: auto;
+            padding: 4px 10px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #888;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .clear-btn:hover {
+            background: #252525;
+            color: #e0e0e0;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .console-output {
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .console-line {
+            margin-bottom: 4px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .console-line.error {
+            color: #ff5370;
+        }
+
+        .console-line.success {
+            color: #4caf50;
+        }
+
+        .console-line.info {
+            color: #2196f3;
+        }
+
+        .console-line.warning {
+            color: #ff9800;
+        }
+
+        .console-timestamp {
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel,
+        .btn-create {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: #252525;
+            color: #e0e0e0;
+        }
+
+        .btn-cancel:hover {
+            background: #2a2a2a;
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-create:hover {
+            opacity: 0.9;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 13px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .notification.success {
+            background: #1b5e20;
+            border-color: #2e7d32;
+        }
+
+        .notification.error {
+            background: #b71c1c;
+            border-color: #c62828;
+        }
+
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            width: 450px;
+            max-width: 90%;
+        }
+
+        .settings-content h3 {
+            margin-bottom: 20px;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .settings-section {
+            margin-bottom: 16px;
+        }
+
+        .settings-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+
+        .settings-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .settings-label input[type="number"] {
+            width: 70px;
+            padding: 6px 10px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .tabs-bar {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 8px;
+            }
+
+            .logo-section {
+                width: 100%;
+                padding-right: 0;
+                padding-bottom: 8px;
+                border-right: none;
+                border-bottom: 1px solid #252525;
+                margin-bottom: 8px;
+            }
+
+            .actions {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .action-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .add-file-btn {
+                padding: 4px 10px;
+                font-size: 11px;
+            }
+
+            .tab {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .bottom-panel {
+                height: 150px;
+            }
+
+            .modal-content,
+            .settings-content {
+                width: 95%;
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="main-content">
+            <div class="tabs-bar">
+                <div class="logo-section">
+                    <img src="https://raknot.dev/dashboard/images/logo.webp" alt="Raknot Logo">
+                    <span>Lua Editor</span>
+                </div>
+
+                <div class="add-file-dropdown">
+                    <button class="add-file-btn" id="addFileBtn">+ Add File</button>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <div class="dropdown-item" id="newFileOption">Create New File</div>
+                        <div class="dropdown-item" id="importFileOption">Import File</div>
+                    </div>
+                </div>
+                
+                <div class="tabs" id="tabs"></div>
+                
+                <div class="actions">
+                    <button class="action-btn" id="formatBtn">Format</button>
+                    <button class="action-btn" id="checkSyntaxBtn">Check Syntax</button>
+                    <button class="action-btn" id="exportBtn">Export</button>
+                    <button class="action-btn" id="settingsBtn">Settings</button>
+                </div>
+            </div>
+
+            <div class="editor-wrapper">
+                <div id="editor"></div>
+            </div>
+
+            <div class="bottom-panel" id="bottomPanel">
+                <div class="panel-tabs">
+                    <button class="panel-tab active" data-panel="console">Console</button>
+                    <button class="panel-tab" data-panel="errors">Errors</button>
+                    <button class="panel-tab" data-panel="output">Output</button>
+                    <button class="clear-btn" id="clearConsole">Clear</button>
+                </div>
+                <div class="panel-content">
+                    <div class="console-output" id="consoleOutput"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="newFileModal">
+        <div class="modal-content">
+            <h3>Create New File</h3>
+            <input type="text" id="newFileName" placeholder="Enter file name (e.g., script.lua)">
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelNewFile">Cancel</button>
+                <button class="btn-create" id="createNewFile">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <h3>Editor Settings</h3>
+            <div class="settings-section">
+                <div class="settings-label">
+                    <span>Font Size</span>
+                    <input type="number" id="fontSizeSetting" value="14" min="10" max="24">
+                </div>
+                <div class="settings-label">
+                    <span>Word Wrap</span>
+                    <input type="checkbox" id="wordWrapSetting">
+                </div>
+                <div class="settings-label">
+                    <span>Minimap</span>
+                    <input type="checkbox" id="minimapSetting" checked>
+                </div>
+                <div class="settings-label">
+                    <span>Line Numbers</span>
+                    <input type="checkbox" id="lineNumbersSetting" checked>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="closeSettings">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="importFileInput" accept=".lua" style="display: none;">
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let editor;
+        let files = [{
+            name: 'welcome.lua',
+            content: `-- Welcome to Raknot Lua Editor
+-- This is just an example please host it yourself as nothing will save
+
+print("Hello, World!")
+
+-- Start coding!`
+        }];
+        let currentFileIndex = 0;
+        let activePanel = 'console';
+        let logs = { console: [], errors: [], output: [] };
+
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: files[0].content,
+                language: 'lua',
+                theme: 'vs-dark',
+                fontSize: 14,
+                minimap: { enabled: true },
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                wordWrap: 'off',
+                lineNumbers: 'on'
+            });
+
+            editor.onDidChangeModelContent(() => {
+                files[currentFileIndex].content = editor.getValue();
+                debounceCheck();
+            });
+
+            renderTabs();
+            addLog('console', 'Welcome to Raknot Lua Editor!', 'info');
+        });
+
+        let checkTimeout;
+        function debounceCheck() {
+            clearTimeout(checkTimeout);
+            checkTimeout = setTimeout(() => {
+                checkSyntax(true);
+            }, 500);
+        }
+
+        document.getElementById('addFileBtn').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        });
+
+        document.getElementById('newFileOption').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.remove('show');
+            document.getElementById('newFileModal').classList.add('active');
+            document.getElementById('newFileName').value = '';
+            document.getElementById('newFileName').focus();
+        });
+
+        document.getElementById('importFileOption').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.remove('show');
+            document.getElementById('importFileInput').click();
+        });
+
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    files.push({ name: file.name, content: event.target.result });
+                    currentFileIndex = files.length - 1;
+                    editor.setValue(files[currentFileIndex].content);
+                    renderTabs();
+                    addLog('console', `Imported: ${file.name}`, 'success');
+                };
+                reader.readAsText(file);
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('createNewFile').addEventListener('click', () => {
+            let fileName = document.getElementById('newFileName').value.trim();
+            if (!fileName) return;
+            if (!fileName.endsWith('.lua')) fileName += '.lua';
+            
+            files.push({ name: fileName, content: '-- New Lua file\nprint("Hello from ' + fileName + '")' });
+            currentFileIndex = files.length - 1;
+            editor.setValue(files[currentFileIndex].content);
+            document.getElementById('newFileModal').classList.remove('active');
+            renderTabs();
+            addLog('console', `Created: ${fileName}`, 'success');
+        });
+
+        document.getElementById('cancelNewFile').addEventListener('click', () => {
+            document.getElementById('newFileModal').classList.remove('active');
+        });
+
+        document.getElementById('formatBtn').addEventListener('click', formatCode);
+        document.getElementById('checkSyntaxBtn').addEventListener('click', () => checkSyntax(false));
+        document.getElementById('exportBtn').addEventListener('click', exportCurrentFile);
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.add('active');
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.remove('active');
+        });
+
+        document.getElementById('fontSizeSetting').addEventListener('change', (e) => {
+            editor.updateOptions({ fontSize: parseInt(e.target.value) });
+        });
+
+        document.getElementById('wordWrapSetting').addEventListener('change', (e) => {
+            editor.updateOptions({ wordWrap: e.target.checked ? 'on' : 'off' });
+        });
+
+        document.getElementById('minimapSetting').addEventListener('change', (e) => {
+            editor.updateOptions({ minimap: { enabled: e.target.checked } });
+        });
+
+        document.getElementById('lineNumbersSetting').addEventListener('change', (e) => {
+            editor.updateOptions({ lineNumbers: e.target.checked ? 'on' : 'off' });
+        });
+
+        document.querySelectorAll('.panel-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activePanel = tab.dataset.panel;
+                renderConsole();
+            });
+        });
+
+        document.getElementById('clearConsole').addEventListener('click', () => {
+            logs[activePanel] = [];
+            renderConsole();
+        });
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('tabs');
+            tabsContainer.innerHTML = '';
+            files.forEach((file, index) => {
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (index === currentFileIndex ? ' active' : '');
+                tab.innerHTML = `${file.name} <span class="tab-close" data-index="${index}">x</span>`;
+                tab.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('tab-close')) {
+                        switchToFile(index);
+                    }
+                });
+                tab.querySelector('.tab-close').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    closeFile(index);
+                });
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        function switchToFile(index) {
+            files[currentFileIndex].content = editor.getValue();
+            currentFileIndex = index;
+            editor.setValue(files[currentFileIndex].content);
+            renderTabs();
+            logs = { console: [], errors: [], output: [] };
+            addLog('console', `Opened: ${files[currentFileIndex].name}`, 'info');
+            renderConsole();
+        }
+
+        function closeFile(index) {
+            if (files.length === 1) {
+                showNotification('Cannot close the last file', 'error');
+                return;
+            }
+            files.splice(index, 1);
+            if (currentFileIndex >= files.length) currentFileIndex = files.length - 1;
+            editor.setValue(files[currentFileIndex].content);
+            renderTabs();
+        }
+
+        function formatCode() {
+            let code = editor.getValue();
+            let lines = code.split('\n');
+            let formatted = [];
+            let indent = 0;
+
+            for (let line of lines) {
+                let trimmed = line.trim();
+                if (trimmed.match(/^(end|else|elseif|until)/)) indent = Math.max(0, indent - 1);
+                formatted.push('    '.repeat(indent) + trimmed);
+                if (trimmed.match(/(function|if|for|while|repeat|else|elseif).*(then)?$/)) indent++;
+                if (trimmed.match(/^end/)) indent = Math.max(0, indent - 1);
+            }
+
+            editor.setValue(formatted.join('\n'));
+            addLog('console', 'Code formatted', 'success');
+        }
+
+        function checkSyntax(auto = false) {
+            const code = editor.getValue();
+            const errors = [];
+            const lines = code.split('\n');
+
+            const keywords = ['function', 'end', 'if', 'then', 'else', 'elseif', 'for', 'while', 'do', 'repeat', 'until', 'local', 'return'];
+            let functionDepth = 0;
+            let ifDepth = 0;
+            let loopDepth = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line || line.startsWith('--')) continue;
+
+                if (line.match(/\bfunction\b/)) functionDepth++;
+                if (line.match(/\bif\b/)) ifDepth++;
+                if (line.match(/\b(for|while|repeat)\b/)) loopDepth++;
+                
+                if (line.match(/\bend\b/)) {
+                    if (loopDepth > 0) loopDepth--;
+                    else if (ifDepth > 0) ifDepth--;
+                    else if (functionDepth > 0) functionDepth--;
+                    else errors.push({ line: i + 1, message: 'Unexpected "end"' });
+                }
+
+                if (line.match(/\bthen\b/) && !line.match(/\bif\b/) && !line.match(/\belseif\b/)) {
+                    errors.push({ line: i + 1, message: '"then" without "if" or "elseif"' });
+                }
+            }
+
+            if (functionDepth > 0) errors.push({ line: lines.length, message: `Unclosed function (missing ${functionDepth} "end")` });
+            if (ifDepth > 0) errors.push({ line: lines.length, message: `Unclosed if statement (missing ${ifDepth} "end")` });
+            if (loopDepth > 0) errors.push({ line: lines.length, message: `Unclosed loop (missing ${loopDepth} "end")` });
+
+            monaco.editor.setModelMarkers(editor.getModel(), 'lua', errors.map(err => ({
+                startLineNumber: err.line,
+                startColumn: 1,
+                endLineNumber: err.line,
+                endColumn: lines[err.line - 1].length + 1,
+                message: err.message,
+                severity: monaco.MarkerSeverity.Error
+            })));
+
+            if (!auto) {
+                logs.errors = [];
+                if (errors.length === 0) {
+                    addLog('console', 'Syntax check completed', 'success');
+                    addLog('console', 'No syntax errors', 'info');
+                } else {
+                    addLog('console', `Found ${errors.length} error(s)`, 'error');
+                    errors.forEach(err => {
+                        addLog('errors', `Line ${err.line}: ${err.message}`, 'error');
+                    });
+                }
+            }
+        }
+
+        function exportCurrentFile() {
+            const file = files[currentFileIndex];
+            const blob = new Blob([file.content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+            addLog('console', `Exported: ${file.name}`, 'success');
+        }
+
+        function addLog(type, message, level = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs[type].push({ timestamp, message, level });
+            if (type === activePanel) renderConsole();
+        }
+
+        function renderConsole() {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML = logs[activePanel].map(log => 
+                `<div class="console-line ${log.level}">
+                    <span class="console-timestamp">[${log.timestamp}]</span>
+                    <span>${log.message}</span>
+                </div>`
+            ).join('');
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.add-file-dropdown')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
