@@ -460,6 +460,68 @@
             font-size: 13px;
         }
 
+        .tab-rename-input {
+            padding: 4px 8px;
+            background: #0a0a0a;
+            border: 1px solid #667eea;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 13px;
+            width: 120px;
+        }
+
+        .snippets-dropdown {
+            position: relative;
+        }
+
+        .snippets-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 100;
+        }
+
+        .snippets-menu.show {
+            display: block;
+        }
+
+        .snippet-item {
+            padding: 10px 16px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #252525;
+        }
+
+        .snippet-item:last-child {
+            border-bottom: none;
+        }
+
+        .snippet-item:hover {
+            background: #252525;
+        }
+
+        .snippet-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 2px;
+        }
+
+        .snippet-desc {
+            font-size: 11px;
+            color: #888;
+        }
+
         @media (max-width: 768px) {
             .tabs-bar {
                 flex-wrap: wrap;
@@ -522,6 +584,7 @@
                     <div class="dropdown-menu" id="dropdownMenu">
                         <div class="dropdown-item" id="newFileOption">Create New File</div>
                         <div class="dropdown-item" id="importFileOption">Import File</div>
+                        <div class="dropdown-item" id="duplicateFileOption">Duplicate Current File</div>
                     </div>
                 </div>
                 
@@ -531,6 +594,10 @@
                     <button class="action-btn" id="formatBtn">Format</button>
                     <button class="action-btn" id="checkSyntaxBtn">Check Syntax</button>
                     <button class="action-btn" id="copyBtn">Copy Code</button>
+                    <div class="snippets-dropdown">
+                        <button class="action-btn" id="snippetsBtn">Snippets</button>
+                        <div class="snippets-menu" id="snippetsMenu"></div>
+                    </div>
                     <button class="action-btn" id="exportBtn">Export</button>
                     <button class="action-btn" id="settingsBtn">Settings</button>
                 </div>
@@ -673,6 +740,19 @@ print("Hello, World!")
             e.target.value = '';
         });
 
+        document.getElementById('duplicateFileOption').addEventListener('click', () => {
+            document.getElementById('dropdownMenu').classList.remove('show');
+            const currentFile = files[currentFileIndex];
+            const baseName = currentFile.name.replace('.lua', '');
+            const newName = `${baseName}_copy.lua`;
+            
+            files.push({ name: newName, content: currentFile.content });
+            currentFileIndex = files.length - 1;
+            editor.setValue(files[currentFileIndex].content);
+            renderTabs();
+            addLog('console', `Duplicated: ${currentFile.name} → ${newName}`, 'success');
+        });
+
         document.getElementById('createNewFile').addEventListener('click', () => {
             let fileName = document.getElementById('newFileName').value.trim();
             if (!fileName) return;
@@ -718,6 +798,83 @@ print("Hello, World!")
             editor.updateOptions({ lineNumbers: e.target.checked ? 'on' : 'off' });
         });
 
+        const snippets = [
+            {
+                title: 'For Loop',
+                desc: 'Numeric for loop',
+                code: 'for i = 1, 10 do\n    print(i)\nend'
+            },
+            {
+                title: 'For Pairs',
+                desc: 'Iterate over table',
+                code: 'for key, value in pairs(table) do\n    print(key, value)\nend'
+            },
+            {
+                title: 'Function',
+                desc: 'Function definition',
+                code: 'function myFunction(param)\n    -- function body\n    return result\nend'
+            },
+            {
+                title: 'If Statement',
+                desc: 'Conditional statement',
+                code: 'if condition then\n    -- code\nelse\n    -- code\nend'
+            },
+            {
+                title: 'While Loop',
+                desc: 'While loop',
+                code: 'while condition do\n    -- code\nend'
+            },
+            {
+                title: 'Table',
+                desc: 'Table definition',
+                code: 'local myTable = {\n    key1 = "value1",\n    key2 = "value2"\n}'
+            },
+            {
+                title: 'Print',
+                desc: 'Print statement',
+                code: 'print("message")'
+            },
+            {
+                title: 'Local Variable',
+                desc: 'Local variable declaration',
+                code: 'local myVar = value'
+            }
+        ];
+
+        document.getElementById('snippetsBtn').addEventListener('click', () => {
+            const menu = document.getElementById('snippetsMenu');
+            menu.classList.toggle('show');
+            
+            if (menu.classList.contains('show')) {
+                menu.innerHTML = snippets.map((snippet, index) => `
+                    <div class="snippet-item" data-index="${index}">
+                        <div class="snippet-title">${snippet.title}</div>
+                        <div class="snippet-desc">${snippet.desc}</div>
+                    </div>
+                `).join('');
+                
+                menu.querySelectorAll('.snippet-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const snippet = snippets[item.dataset.index];
+                        const position = editor.getPosition();
+                        const range = new monaco.Range(
+                            position.lineNumber,
+                            position.column,
+                            position.lineNumber,
+                            position.column
+                        );
+                        editor.executeEdits('', [{
+                            range: range,
+                            text: snippet.code,
+                            forceMoveMarkers: true
+                        }]);
+                        menu.classList.remove('show');
+                        addLog('console', `Inserted snippet: ${snippet.title}`, 'success');
+                    });
+                });
+            }
+        });
+
         document.querySelectorAll('.panel-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
@@ -739,6 +896,43 @@ print("Hello, World!")
                 const tab = document.createElement('button');
                 tab.className = 'tab' + (index === currentFileIndex ? ' active' : '');
                 tab.innerHTML = `${file.name} <span class="tab-close" data-index="${index}">x</span>`;
+                
+                tab.addEventListener('contextmenu', (e) => {
+                    if (e.target.classList.contains('tab-close')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'tab-rename-input';
+                    input.value = file.name.replace('.lua', '');
+                    
+                    tab.innerHTML = '';
+                    tab.appendChild(input);
+                    input.focus();
+                    input.select();
+                    
+                    const finishRename = () => {
+                        let newName = input.value.trim();
+                        if (!newName) {
+                            renderTabs();
+                            return;
+                        }
+                        if (!newName.endsWith('.lua')) newName += '.lua';
+                        
+                        const oldName = files[index].name;
+                        files[index].name = newName;
+                        renderTabs();
+                        addLog('console', `Renamed: ${oldName} → ${newName}`, 'success');
+                    };
+                    
+                    input.addEventListener('blur', finishRename);
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') finishRename();
+                        if (e.key === 'Escape') renderTabs();
+                    });
+                });
+                
                 tab.addEventListener('click', (e) => {
                     if (!e.target.classList.contains('tab-close')) {
                         switchToFile(index);
@@ -900,6 +1094,9 @@ print("Hello, World!")
         window.addEventListener('click', (e) => {
             if (!e.target.closest('.add-file-dropdown')) {
                 document.getElementById('dropdownMenu').classList.remove('show');
+            }
+            if (!e.target.closest('.snippets-dropdown')) {
+                document.getElementById('snippetsMenu').classList.remove('show');
             }
         });
     </script>
