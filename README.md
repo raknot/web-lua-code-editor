@@ -12,6 +12,7 @@
 - **Code Formatting** - Auto-indent and format your code
 - **Export Files** - Download your work as .lua files
 - **Mobile Ready** - Fully responsive design for coding on the go
+- **Copy Code** - Saves the code to your clipboard
 
 ## Quick Start
 
